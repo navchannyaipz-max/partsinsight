@@ -127,6 +127,7 @@ def main():
     git("config", "user.email", f"{me['id']}+{login}@users.noreply.github.com")
     if git("status", "--porcelain", capture=True):
         git("commit", "-q", "-m", "PartsInsight: аналітична система пошуку автозапчастин")
+    git("branch", "-M", "main")  # гілка має називатися main незалежно від версії git
     git("remote", "remove", "origin", check=False)
     git("remote", "add", "origin", clone_url)
     auth = base64.b64encode(f"{login}:{token}".encode()).decode()

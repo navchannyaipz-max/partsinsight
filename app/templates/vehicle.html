@@ -1,0 +1,95 @@
+{% extends "base.html" %}
+{% from "_icons.html" import ico %}
+{% from "_thumb.html" import thumb %}
+{% block title %}Підбір за авто{% endblock %}
+{% block content %}
+<section class="hero" style="padding-bottom:8px">
+  <h1>Підбір запчастин за автомобілем</h1>
+  <p class="lead">Оберіть марку, модель і рік, а потім тип деталі.</p>
+</section>
+
+<form class="card vsel" method="get" action="{{ url_for('vehicle_pick') }}" id="vform">
+  <div><label for="make">Марка</label>
+    <select id="make" name="make" data-reset="model,year,part">
+      <option value="">— оберіть —</option>{% for x in makes %}<option {{ 'selected' if x == make }}>{{ x }}</option>{% endfor %}</select></div>
+  <div><label for="model">Модель</label>
+    <select id="model" name="model" data-reset="year,part" {{ 'disabled' if not models }}>
+      <option value="">— оберіть —</option>{% for x in models %}<option {{ 'selected' if x == model }}>{{ x }}</option>{% endfor %}</select></div>
+  <div><label for="year">Рік випуску</label>
+    <select id="year" name="year" {{ 'disabled' if not years }}>
+      <option value="">— оберіть —</option>{% for x in years %}<option {{ 'selected' if x == year }}>{{ x }}</option>{% endfor %}</select></div>
+  <div><label for="engine">Двигун (необов’язково)</label>
+    <input type="text" id="engine" name="engine" maxlength="30" value="{{ engine }}" placeholder="1.6 TDI" {{ 'disabled' if not year }}></div>
+  {% if part %}<input type="hidden" name="part" value="{{ part }}">{% endif %}
+  <noscript><button class="btn primary" type="submit">Далі</button></noscript>
+</form>
+<p class="hint">Сумісність знайдених деталей підтверджуйте за VIN-кодом або в каталозі продавця.</p>
+
+{% if make and model and year %}
+<h2 style="margin:24px 0 12px">Що шукаємо для {{ car }}?</h2>
+{% for cat, items in types.items() %}
+<h3 class="muted" style="margin:16px 0 8px;font-size:.95rem">{{ cat }}</h3>
+<div class="partgrid">
+  {% for it in items %}
+  <a class="parttype" href="{{ url_for('vehicle_pick', make=make, model=model, year=year, engine=engine or none, part=it) }}" {% if it == part %}aria-current="true"{% endif %}>{{ ico('k-' ~ {'Фільтри':'filter','Гальма':'brake','Запалювання':'spark','Підвіска':'shock','Двигун і ГРМ':'belt','Трансмісія':'clutch','Електрика':'battery'}[cat]) }}{{ it }}</a>
+  {% endfor %}
+</div>
+{% endfor %}
+{% endif %}
+
+{% if part and (archived or found) %}
+<section style="margin-top:32px">
+  <div style="display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;align-items:baseline">
+    <h2 style="margin:0">{{ part }} · знайдено: {{ archived|length }}</h2>
+    <span class="muted">{% if found %}{{ found.ms }} мс · {% endif %}<a href="{{ url_for('vehicle_pick', make=make, model=model, year=year, engine=engine or none, part=part, refresh=1) }}" style="display:inline-flex;gap:4px;align-items:center">{{ ico('refresh') }}шукати ще</a></span>
+  </div>
+  {% if is_admin and found %}<details class="more"><summary>Технічні деталі пошуку ({{ found.ms }} мс)</summary>
+  <div class="status">{% for s in found.sources %}<span class="dot {{ 'ok' if s.ok else 'err' }}" title="{{ s.error }}">{{ ico('check') if s.ok else ico('alert') }}{{ s.name }} · {% if s.ok %}{{ s['items'] }} зап.{% else %}{{ s.error }}{% endif %}</span>{% endfor %}</div></details>{% endif %}
+  {% if found and not found.sources %}
+  <div class="card" style="margin-top:12px"><p style="margin:0">Джерела пошуку ще не налаштовано. <a href="{{ url_for('settings') }}">Налаштувати</a></p></div>
+  {% endif %}
+
+  <div class="partlist">
+  {% for p in archived %}
+    <article class="card found">
+      {{ thumb(p.image, p.kind) }}
+      <div class="meta">
+        <h3 style="margin:0 0 4px;font-size:1.05rem">{{ p.title }}</h3>
+        <div class="muted"><b>{{ p.brand or 'виробник не визначено' }}</b> · <span class="mono">{{ p.mpn }}</span>
+          · роки: {{ p.years }}
+          {% if p.last_min %}· остання ціна від <b>{{ p.last_min|money }} ₴</b> ({{ p.last_price_at|ago }}){% endif %}</div>
+        <div class="compat compat-{{ p.compat.level }}" role="note"><b>Сумісність:</b> {{ p.compat.text }}</div>
+        {% if p.analogs %}<div class="muted" style="margin-top:6px">Аналоги з довідника: {% for a in p.analogs %}<a class="chip" href="{{ url_for('search', q=a.mpn, m=a.mfr, back=back, car=car) }}" title="{{ a.ref_source }}">{{ a.mfr }} {{ a.mpn }}</a>{% endfor %}</div>{% endif %}
+      </div>
+      <a class="btn primary" href="{{ url_for('search', q=p.mpn, m=p.brand or none, back=back, car=car) }}" data-busy-link>{{ ico('tag') }}Ціни й аналоги</a>
+    </article>
+  {% else %}
+    <div class="card"><p class="muted" style="margin:0">Нічого не знайдено{% if found and found.loose %}, але є пропозиції без артикула нижче{% endif %}. Спробуйте інший тип деталі або вкажіть двигун.</p></div>
+  {% endfor %}
+  </div>
+
+  {% if found and found.loose %}
+  <h3 style="margin:24px 0 8px">Пропозиції без артикула</h3>
+  <div class="partlist">
+    {% for x in found.loose %}
+    <article class="card found">
+      {{ thumb(x.image, x.kind) }}
+      <div class="meta"><div><b>{{ x.title }}</b></div><div class="muted">{{ x.source }}</div></div>
+      {% if x.url %}<a class="btn sm" href="{{ x.url }}" target="_blank" rel="noopener noreferrer nofollow">{{ ico('ext') }}Відкрити</a>{% endif %}
+    </article>
+    {% endfor %}
+  </div>
+  {% endif %}
+</section>
+{% endif %}
+
+<style>
+.vsel{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:16px}
+.mono{font-family:"Fira Code",monospace}
+</style>
+<script>
+document.querySelectorAll("#vform select").forEach(function(s){s.addEventListener("change",function(){
+  (s.dataset.reset||"").split(",").filter(Boolean).forEach(function(n){var e=document.querySelector("#vform [name="+n+"]");if(e)e.remove()});
+  document.getElementById("vform").submit()})});
+</script>
+{% endblock %}

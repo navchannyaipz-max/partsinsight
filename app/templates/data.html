@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% from "_icons.html" import ico %}
+{% block title %}Дані та копії{% endblock %}
+{% block content %}
+<div class="crumbs"><a href="{{ url_for('admin') }}">{{ ico('back') }} Джерела</a></div>
+<h1 style="font-size:1.6rem">Дані та копії</h1>
+<p class="lead" style="margin-top:8px">Архів, ключі та налаштування зберігаються в одній базі поза папкою програми, тому оновлення програми їх не змінює.</p>
+
+<div class="card" style="margin-top:16px">
+  <h2>Де зберігаються дані</h2>
+  <dl class="kv"><dt>Файл бази</dt><dd class="mono">{{ path }}</dd>
+    <dt>Розмір</dt><dd>{{ '%.1f'|format(size/1024) }} КБ</dd>
+    <dt>У базі</dt><dd>деталей: {{ st.parts }} · прив’язок до авто: {{ st.links }} · знімків цін: {{ st.snapshots }}</dd>
+    <dt>Копії</dt><dd class="mono">{{ bdir }}</dd></dl>
+  <p class="hint">Щоб перенести дані на інший комп’ютер, скопіюйте цей файл або завантажте копію нижче.</p>
+  <div style="display:flex;gap:8px;flex-wrap:wrap">
+    <a class="btn" href="{{ url_for('data_download') }}">{{ ico('download') }}Завантажити копію бази</a>
+    <a class="btn" href="{{ url_for('archive_csv') }}">{{ ico('download') }}Експорт архіву (CSV)</a>
+    <form method="post" action="{{ url_for('data_backup') }}" class="inline"><input type="hidden" name="csrf" value="{{ csrf() }}"><button class="btn" type="submit">{{ ico('save') }}Створити копію зараз</button></form>
+  </div>
+</div>
+<div class="card" style="margin-top:16px">
+  <h2>Автоматичні копії</h2>
+  <p class="hint" style="margin-top:0">Програма щодоби робить копію під час запуску й зберігає останні 7.</p>
+  {% for n, sz in backups %}<div class="muted" style="display:flex;justify-content:space-between"><span class="mono">{{ n }}</span><span>{{ '%.1f'|format(sz/1024) }} КБ</span></div>
+  {% else %}<p class="muted" style="margin:0">Поки немає.</p>{% endfor %}
+  <p class="hint">Відновлення: закрийте програму й замініть файл бази потрібною копією.</p>
+</div>
+{% endblock %}

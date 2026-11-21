@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% from "_icons.html" import ico %}
+{% block title %}Ключі та налаштування{% endblock %}
+{% block content %}
+<div class="crumbs"><a href="{{ url_for('admin') }}">{{ ico('back') }} Джерела</a></div>
+<h1 style="font-size:1.6rem">Ключі та налаштування</h1>
+<p class="lead" style="margin-top:8px">Ключі вводяться тут і зберігаються лише в локальній базі цього застосунку. Після збереження натисніть «Зберегти й перевірити»: система зробить тестовий запит і сама увімкне джерело, якщо воно працює.</p>
+
+{% for p in providers %}
+<form class="card" method="post" style="margin-top:16px;display:grid;gap:14px">
+  <input type="hidden" name="csrf" value="{{ csrf() }}">
+  <input type="hidden" name="verify" value="{{ p.id }}">
+  <div style="display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;align-items:baseline">
+    <h2 style="margin:0">{{ p.name }}</h2>
+    {% if p.kind == 'xref' and p.src and p.src.enabled %}<span class="state ok">{{ ico('check') }}Активно · накопичено аналогів: {{ p.src.last_items }}</span>
+    {% elif p.src and p.src.enabled %}<span class="state ok">{{ ico('check') }}Увімкнено</span>
+    {% elif p.src and p.src.last_status=='error' %}<span class="state" style="color:var(--bad)" title="{{ p.src.last_error }}">{{ ico('alert') }}Помилка: {{ p.src.last_error|truncate(90) }}</span>
+    {% else %}<span class="state off">{{ ico('power') }}Вимкнено</span>{% endif %}
+  </div>
+  <p class="hint" style="margin:0">{{ p.help }} <a href="{{ p.link }}" target="_blank" rel="noopener noreferrer">Відкрити сторінку ключів {{ ico('ext') }}</a></p>
+  {% for k in p.fields %}
+  <div class="keyrow">
+    <div>
+      <label for="{{ k.name }}">{{ k.label }} {% if k.set %}<span class="state ok">{{ ico('check') }}задано {{ k.tail }}</span>{% endif %}</label>
+      <input type="password" id="{{ k.name }}" name="{{ k.name }}" autocomplete="off" spellcheck="false"
+             placeholder="{{ 'Залиште порожнім, щоб не змінювати' if k.set else 'Вставте значення' }}">
+      <p class="hint" style="margin:4px 0 0">{{ k.hint }}</p>
+    </div>
+    {% if k.set %}<label style="margin:0 0 6px;white-space:nowrap"><input type="checkbox" name="clear_{{ k.name }}" style="width:auto;min-height:0"> стерти</label>{% endif %}
+  </div>
+  {% endfor %}
+  <div><button class="btn primary" type="submit" data-busy-link>{{ ico('shield') }}Зберегти й перевірити</button></div>
+</form>
+{% endfor %}
+
+<form class="card" method="post" style="margin-top:16px;display:grid;gap:14px;max-width:520px">
+  <input type="hidden" name="csrf" value="{{ csrf() }}">
+  <input type="hidden" name="act" value="password">
+  <h2 style="margin:0">Пароль адмін-панелі</h2>
+  <div><label for="new_password">Новий пароль (від 6 символів)</label>
+    <input type="password" id="new_password" name="new_password" autocomplete="new-password" minlength="6"></div>
+  <div><button class="btn" type="submit">{{ ico('save') }}Змінити пароль</button></div>
+</form>
+{% endblock %}

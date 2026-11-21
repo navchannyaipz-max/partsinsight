@@ -1,0 +1,9 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="card" style="max-width:640px;margin:48px auto;text-align:center">
+  <h1>Щось пішло не так</h1>
+  <p class="muted">Не вдалося обробити запит. Спробуйте ще раз або змініть запит.</p>
+  <p><a class="btn" href="{{ url_for('index') }}">На головну</a></p>
+  {% if detail %}<details><summary>Технічні деталі (адмін)</summary><pre style="text-align:left;overflow:auto">{{ detail }}</pre></details>{% endif %}
+</section>
+{% endblock %}

@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% from "_icons.html" import ico %}
+{% block title %}Довідники{% endblock %}
+{% block content %}
+<div class="crumbs"><a href="{{ url_for('admin') }}">{{ ico('back') }} Джерела</a></div>
+<h1 style="font-size:1.6rem">Довідники</h1>
+
+
+<section style="margin-top:24px"><h2>Словник брендів</h2>
+  <p class="hint">Нові бренди потрапляють сюди автоматично з відповідей джерел як непідтверджені. Підтвердіть або об’єднайте з існуючим (наприклад, «Febi Bilstein» → FEBI).</p>
+  <div class="card tw"><table>
+    <thead><tr><th>Бренд</th><th>Ключ</th><th>Стан</th><th class="num">Зустрінувся</th><th>Джерело</th><th>Дії</th></tr></thead><tbody>
+    {% for b in brands %}<tr>
+      <td><b>{{ b.display }}</b></td><td class="mono">{{ b.canonical }}</td>
+      <td>{% if b.verified %}<span class="state ok">{{ ico('check') }}підтверджено</span>{% else %}<span class="state off">{{ ico('help') }}не підтверджено</span>{% endif %}</td>
+      <td class="num">{{ b.seen_count }}</td><td class="muted">{{ b.source }}</td>
+      <td style="white-space:nowrap">{% if not b.verified %}
+        <form method="post" class="inline"><input type="hidden" name="csrf" value="{{ csrf() }}"><input type="hidden" name="act" value="brand_ok"><input type="hidden" name="id" value="{{ b.id }}"><button class="btn sm" type="submit">{{ ico('check') }}Підтвердити</button></form>
+        <form method="post" class="inline" style="display:inline-flex;gap:6px"><input type="hidden" name="csrf" value="{{ csrf() }}"><input type="hidden" name="act" value="brand_merge"><input type="hidden" name="id" value="{{ b.id }}">
+          <select name="target" aria-label="Об’єднати з" style="min-height:40px;width:auto"><option value="">Об’єднати з…</option>{% for v in verified_brands %}<option>{{ v }}</option>{% endfor %}</select>
+          <button class="btn sm" type="submit">{{ ico('swap') }}OK</button></form>{% endif %}</td>
+    </tr>{% endfor %}</tbody></table></div>
+</section>
+
+<section style="margin-top:24px" class="two">
+  <div class="card"><h2>Каталог авто ({{ models|length }})</h2>
+    <form method="post" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:10px;align-items:end">
+      <input type="hidden" name="csrf" value="{{ csrf() }}"><input type="hidden" name="act" value="model_add">
+      <div><label for="mk">Марка</label><input type="text" id="mk" name="make" required></div>
+      <div><label for="md">Модель</label><input type="text" id="md" name="model" required></div>
+      <div><label for="y0">Рік від</label><input type="number" id="y0" name="year_from" required min="1950" max="2035"></div>
+      <div><label for="y1">Рік до</label><input type="number" id="y1" name="year_to" required min="1950" max="2035"></div>
+      <button class="btn" type="submit">{{ ico('plus') }}Додати</button></form>
+    <p class="hint">У каталозі {{ models|length }} моделей; нові з’являються в підборі за авто одразу.</p></div>
+  <div class="card"><h2>Типи деталей</h2>
+    <form method="post" style="display:grid;grid-template-columns:1fr 1fr auto;gap:10px;align-items:end">
+      <input type="hidden" name="csrf" value="{{ csrf() }}"><input type="hidden" name="act" value="type_add">
+      <div><label for="cat">Категорія</label><input type="text" id="cat" name="category" list="cats" required>
+        <datalist id="cats">{% for c in types %}<option>{{ c }}</option>{% endfor %}</datalist></div>
+      <div><label for="nm">Назва</label><input type="text" id="nm" name="name" required></div>
+      <button class="btn" type="submit">{{ ico('plus') }}Додати</button></form>
+    <p class="hint">{% for c, items in types.items() %}<b>{{ c }}</b>: {{ items|length }}{{ ' · ' if not loop.last }}{% endfor %}</p></div>
+</section>
+{% endblock %}

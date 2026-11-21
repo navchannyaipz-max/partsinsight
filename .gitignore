@@ -1,0 +1,12 @@
+__pycache__/
+*.pyc
+*.db
+*.db-wal
+*.db-shm
+venv/
+.venv/
+.pytest_cache/
+errors.log
+experiments/e1/runs/
+experiments/f4_result.md
+.env

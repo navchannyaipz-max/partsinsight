@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+{% from "_icons.html" import ico %}
+{% block title %}Джерела{% endblock %}
+{% block content %}
+<div style="display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;align-items:center">
+  <h1 style="font-size:1.6rem;margin:0">Інтернет-джерела</h1>
+  <div style="display:flex;gap:8px">
+    <a class="btn primary" href="{{ url_for('source_quick') }}">{{ ico('link2') }}Додати магазин за посиланням</a>
+    <a class="btn" href="{{ url_for('source_new') }}">{{ ico('plus') }}Вручну</a>
+    <a class="btn" href="{{ url_for('settings') }}">{{ ico('key') }}Ключі</a>
+    <form method="post" action="{{ url_for('logout') }}" class="inline"><input type="hidden" name="csrf" value="{{ csrf() }}"><button class="btn" type="submit">{{ ico('logout') }}Вийти</button></form>
+  </div>
+</div>
+<p class="lead" style="margin-top:8px">Кожне джерело — це живий канал: сторінка пошуку магазину (найпростіше додати за посиланням) або JSON API. Запити виконуються під час пошуку; перед увімкненням реального сайту перевірте його robots.txt та умови використання.</p>
+
+<div class="card tw" style="padding:8px 12px">
+<table>
+  <thead><tr><th>Назва</th><th>Тип</th><th>Стан</th><th class="num">Записів</th><th class="num">Час</th><th>Остання перевірка</th><th>Дії</th></tr></thead>
+  <tbody>
+  {% for s in sources %}
+  <tr>
+    <td><b>{{ s.name }}</b><div class="hint" style="margin:0;word-break:break-all">{{ s.search_url }}</div></td>
+    <td>{{ 'HTML' if s.kind=='html' else 'JSON API' }}</td>
+    <td>
+      <form class="inline" method="post" action="{{ url_for('source_toggle', sid=s.id) }}"><input type="hidden" name="csrf" value="{{ csrf() }}">
+        <button class="btn sm" type="submit" aria-pressed="{{ 'true' if s.enabled else 'false' }}">{{ ico('power') }}{{ 'Увімкнено' if s.enabled else 'Вимкнено' }}</button></form>
+      {% if s.last_status=='ok' %}<div class="dot ok" style="margin-top:6px">{{ ico('check') }}ок</div>
+      {% elif s.last_status=='error' %}<div class="dot err" style="margin-top:6px" title="{{ s.last_error }}">{{ ico('alert') }}{{ s.last_error|truncate(40) }}</div>{% endif %}
+    </td>
+    <td class="num">{{ s.last_items if s.last_items is not none else '—' }}</td>
+    <td class="num">{{ (s.last_ms ~ ' мс') if s.last_ms is not none else '—' }}</td>
+    <td class="muted">{{ s.last_at|ago }}</td>
+    <td style="white-space:nowrap">
+      <form class="inline" method="post" action="{{ url_for('source_test', sid=s.id) }}"><input type="hidden" name="csrf" value="{{ csrf() }}"><button class="btn sm" type="submit">{{ ico('flask') }}Тест</button></form>
+      <a class="btn sm" href="{{ url_for('source_edit', sid=s.id) }}">{{ ico('edit') }}Змінити</a>
+      <form class="inline" method="post" action="{{ url_for('source_delete', sid=s.id) }}" onsubmit="return confirm('Видалити джерело?')"><input type="hidden" name="csrf" value="{{ csrf() }}"><button class="btn sm danger" type="submit">{{ ico('trash') }}Видалити</button></form>
+    </td>
+  </tr>
+  {% endfor %}
+  </tbody>
+</table></div>
+
+<section id="xrefs" style="margin-top:32px">
+  <h2>Довідник аналогів (CrossReferenceSource)</h2>
+  <p class="hint">Рівень «Аналог» присвоюється лише за записами цього довідника. Збіг назв чи схожість артикулів його не створює.</p>
+  <div class="card tw">
+    <table><thead><tr><th>Виробник A</th><th>Артикул A</th><th>Виробник B</th><th>Артикул B</th><th>Джерело довідника</th><th></th></tr></thead><tbody>
+    {% for x in xrefs %}<tr><td>{{ x.mfr_a }}</td><td class="mono">{{ x.mpn_a }}</td><td>{{ x.mfr_b }}</td><td class="mono">{{ x.mpn_b }}</td><td>{{ x.ref_source }}</td>
+      <td><form class="inline" method="post" action="{{ url_for('xref_delete', xid=x.id) }}"><input type="hidden" name="csrf" value="{{ csrf() }}"><button class="btn sm danger" type="submit" aria-label="Видалити аналог {{ x.mpn_a }} — {{ x.mpn_b }}">{{ ico('trash') }}Видалити</button></form></td></tr>
+    {% else %}<tr><td colspan="6" class="muted">Порожньо</td></tr>{% endfor %}
+    </tbody></table>
+    <form method="post" action="{{ url_for('xref_add') }}" style="margin-top:16px;display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;align-items:end">
+      <input type="hidden" name="csrf" value="{{ csrf() }}">
+      <div><label for="ma">Виробник A</label><input type="text" id="ma" name="mfr_a"></div>
+      <div><label for="pa">Артикул A</label><input type="text" id="pa" name="mpn_a" required></div>
+      <div><label for="mb">Виробник B</label><input type="text" id="mb" name="mfr_b"></div>
+      <div><label for="pb">Артикул B</label><input type="text" id="pb" name="mpn_b" required></div>
+      <div><label for="rs">Джерело довідника</label><input type="text" id="rs" name="ref_source" required></div>
+      <button class="btn" type="submit">{{ ico('plus') }}Додати</button>
+    </form>
+  </div>
+</section>
+
+<section style="margin-top:32px" class="two">
+  <div class="card"><h2>Курси валют до ₴</h2><p class="muted" style="margin:0">{% for c,k in rates.items() %}{{ c }} = {{ k }}{{ ' · ' if not loop.last }}{% endfor %}</p>
+    <p class="hint">Задаються в app/service.py (RATES).</p></div>
+  <div class="card"><h2>Останні пошуки</h2>
+    {% for l in log %}<div class="muted" style="display:flex;justify-content:space-between"><span>«{{ l.q }}» · {{ l.n_offers }} проп.</span><span>{{ l.ms }} мс</span></div>{% else %}<p class="muted">Ще не було.</p>{% endfor %}</div>
+</section>
+{% endblock %}

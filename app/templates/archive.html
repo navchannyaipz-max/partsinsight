@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+{% from "_icons.html" import ico %}
+{% from "_thumb.html" import thumb %}
+{% block title %}Каталог деталей{% endblock %}
+{% block content %}
+<div style="display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;align-items:center">
+  <h1 style="font-size:1.6rem;margin:0">Каталог деталей</h1>
+  <a class="btn" href="{{ url_for('archive_csv') }}">{{ ico('download') }}Експорт у CSV</a>
+</div>
+<p class="lead" style="margin-top:8px">Усі знайдені деталі збираються тут і прив’язуються до авто.</p>
+
+<div class="tiles sm">
+  <div class="tile"><small>Деталей</small><b>{{ st.parts }}</b></div>
+  <div class="tile"><small>Прив’язок до авто</small><b>{{ st.links }}</b></div>
+  <div class="tile"><small>Моделей авто</small><b>{{ st.cars }}</b></div>
+  <div class="tile"><small>Знімків цін</small><b>{{ st.snapshots }}</b></div>
+</div>
+
+<form class="card" method="get" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;align-items:end;margin-top:16px">
+  <div><label for="q">Пошук у каталозі</label><input type="text" id="q" name="q" value="{{ q }}" placeholder="артикул або назва"></div>
+  <div><label for="make">Марка</label><select id="make" name="make" onchange="document.getElementById('model').value='';this.form.submit()"><option value="">Усі</option>{% for x in makes %}<option {{ 'selected' if x==make }}>{{ x }}</option>{% endfor %}</select></div>
+  <div><label for="model">Модель</label><select id="model" name="model" {{ 'disabled' if not models }}><option value="">Усі</option>{% for x in models %}<option {{ 'selected' if x==model }}>{{ x }}</option>{% endfor %}</select></div>
+  <button class="btn primary" type="submit">{{ ico('search') }}Знайти</button>
+</form>
+
+<p class="muted" style="margin:16px 0 8px">Знайдено: {{ total }}</p>
+<div class="partlist">
+{% for p in rows %}
+  <article class="card found">
+    {{ thumb(p.image, p.kind) }}
+    <div class="meta">
+      <h3 style="margin:0 0 4px;font-size:1.05rem"><a href="{{ url_for('item_page', pid=p.id) }}">{{ p.title or p.mpn }}</a></h3>
+      <div class="muted"><b>{{ p.brand or '—' }}</b> · <span class="mono">{{ p.mpn }}</span> · знайдено разів: {{ p.seen_count }} · востаннє {{ p.last_seen|ago }}
+        {% if p.last_min %}· остання ціна від <b>{{ p.last_min|money }} ₴</b>{% endif %}</div>
+      {% if p.cars %}<div class="hint" style="margin:4px 0 0">Авто: {{ p.cars.replace(',', ' · ') }}</div>{% endif %}
+    </div>
+    <a class="btn sm" href="{{ url_for('search', q=p.mpn, m=p.brand or none) }}" data-busy-link>{{ ico('tag') }}Ціни й аналоги</a>
+  </article>
+{% else %}
+  <div class="card"><p class="muted" style="margin:0">Каталог поки порожній: він наповнюється з кожним пошуком.</p></div>
+{% endfor %}
+</div>
+<nav style="display:flex;gap:8px;margin-top:16px">
+  {% if page>1 %}<a class="btn sm" href="{{ url_for('archive_page', q=q, make=make, model=model, page=page-1) }}">{{ ico('back') }}Назад</a>{% endif %}
+  {% if total > page*50 %}<a class="btn sm" href="{{ url_for('archive_page', q=q, make=make, model=model, page=page+1) }}">Далі</a>{% endif %}
+</nav>
+{% endblock %}

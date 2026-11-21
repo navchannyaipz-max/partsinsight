@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="uk">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{% block title %}PartsInsight{% endblock %} · PartsInsight</title>
+<script>try{var t=localStorage.getItem("theme");if(t)document.documentElement.dataset.theme=t}catch(e){}</script>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500&family=Fira+Sans:wght@400;500;600;700&display=swap&subset=cyrillic">
+<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+{% from "_icons.html" import ico %}
+<a class="skip" href="#main">Перейти до вмісту</a>
+<header class="top"><div class="wrap bar">
+  <a class="logo" href="{{ url_for('index') }}"><b>{{ ico('wrench') }}</b>PartsInsight</a>
+  <nav class="main" aria-label="Основна навігація">
+    <a href="{{ url_for('index') }}">{{ ico('search') }}<span class="t">Пошук</span></a>
+    <a href="{{ url_for('vehicle_pick') }}">{{ ico('car') }}<span class="t">Підбір за авто</span></a>
+    <a href="{{ url_for('archive_page') }}">{{ ico('db') }}<span class="t">Каталог</span></a>
+    <a href="{{ url_for('watchlist_page') }}">{{ ico('star') }}<span class="t">Обране</span></a>
+    <button class="icon-btn" id="theme" type="button" aria-label="Перемкнути тему">
+      <svg class="i i-sun" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4 12H2M22 12h-2M5 5l1.5 1.5M17.5 17.5 19 19M19 5l-1.5 1.5M6.5 17.5 5 19"/></svg>
+      <svg class="i i-moon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 14.5A8 8 0 0 1 9.5 4 8 8 0 1 0 20 14.5Z"/></svg>
+    </button>
+  </nav>
+</div></header>
+<main id="main"><div class="wrap">
+  {% for cat, msg in get_flashed_messages(with_categories=true) %}<div class="flash {{ cat }}" role="status">{{ msg }}</div>{% endfor %}
+  {% block content %}{% endblock %}
+</div></main>
+<div id="busy" class="busy" hidden role="status" aria-live="polite"><div class="busy-box"><span class="spin" aria-hidden="true"></span>
+  <b>Шукаємо найкращі пропозиції…</b><span class="muted">Це може тривати кілька секунд.</span></div></div>
+<footer><div class="wrap foot">
+  <span>© PartsInsight · Пошук і порівняння цін на автозапчастини</span>
+  <nav class="foot-links" aria-label="Керування">
+  {% if is_admin %}
+    <a href="{{ url_for('admin') }}">{{ ico('globe') }}Джерела</a>
+    <a href="{{ url_for('dictionaries') }}">{{ ico('book') }}Довідники</a>
+    <a href="{{ url_for('settings') }}">{{ ico('key') }}Ключі</a>
+    <a href="{{ url_for('data_page') }}">{{ ico('db') }}Дані</a>
+    <form method="post" action="{{ url_for('logout') }}" class="inline"><input type="hidden" name="csrf" value="{{ csrf() }}"><button class="linkbtn" type="submit">Вийти</button></form>
+  {% else %}
+    <a href="{{ url_for('login') }}" rel="nofollow">{{ ico('key') }}Вхід</a>
+  {% endif %}
+  </nav>
+</div></footer>
+<script>
+document.getElementById("theme").addEventListener("click",function(){
+  var d=document.documentElement,cur=d.dataset.theme||(matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light");
+  var n=cur==="dark"?"light":"dark";d.dataset.theme=n;try{localStorage.setItem("theme",n)}catch(e){}
+});
+document.querySelectorAll("form[data-busy]").forEach(function(f){f.addEventListener("submit",function(){
+  var b=f.querySelector("button[type=submit]");if(b){b.textContent=b.dataset.busy||"Шукаю…"}
+  document.getElementById("busy").hidden=false;setTimeout(function(){if(b)b.disabled=true},0)})});
+document.querySelectorAll("a[data-busy],.res,.chip").forEach(function(a){a.addEventListener("click",function(e){
+  if(!e.metaKey&&!e.ctrlKey)document.getElementById("busy").hidden=false})});
+window.addEventListener("pageshow",function(){document.getElementById("busy").hidden=true});
+</script>
+</body></html>

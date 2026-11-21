@@ -1,0 +1,138 @@
+{% extends "base.html" %}
+{% from "_icons.html" import ico %}
+{% from "_thumb.html" import thumb %}
+{% block title %}{{ g.brand }} {{ g.mpn }}{% endblock %}
+{% block content %}
+<div class="crumbs"><a href="{{ back_url }}">← Результати для «{{ q }}»</a></div>
+
+<section aria-labelledby="h-id">
+<div style="display:flex;gap:16px;align-items:center;flex-wrap:wrap;margin-top:8px">
+{{ thumb(g.image, g.kind, 'lg') }}
+<div style="flex:1;min-width:240px">
+<h1 id="h-id" style="margin:0 0 6px">{{ g.title }}</h1>
+<p class="muted" style="margin:0"><span class="mono">{{ g.mpn }}</span> · {{ g.brand or 'Виробника не вказано' }}
+  · {{ 'б/в' if g.condition=='used' else 'нова' }} · {% if g.pack is none %}фасування невідоме{% elif g.pack>1 %}упаковка {{ g.pack }} шт.{% else %}1 шт.{% endif %}</p>
+</div></div>
+<div class="why lv-{{ g.level }}" role="note">
+  <span class="badge lvl-{{ g.level }}">{{ ico({'IDENTICAL':'eq','CROSS_REFERENCE':'swap','CANDIDATE':'help'}[g.level]) }}{{ BADGES[g.level] }}</span>
+  <b>{{ g.evidence.basis }}</b>
+  {% set ev = g.evidence %}
+  <ul class="why-list">
+    {% if ev.query_mpn %}<li>Артикул запиту: <span class="mono">{{ ev.query_mpn }}</span> → артикул аналога: <span class="mono">{{ ev.analog_mpn }}</span></li>
+    <li>Джерело зв’язку: {{ ev.ref_source }}</li>{% endif %}
+    {% if ev.note %}<li>{{ ev.note }}</li>{% elif ev.seller_brand %}<li>Виробник продавця: {{ ev.seller_brand }}{% if ev.query_brand %}; у запиті: {{ ev.query_brand }}{% endif %}</li>{% endif %}
+    {% if g.level=='CANDIDATE' %}<li>Це не підтверджена тотожність: перевірте застосовність до вашого авто.</li>{% endif %}
+  </ul>
+</div>
+</section>
+{% set top = g.offers[0] %}
+{% if top.url %}<p style="margin:12px 0 0"><a class="btn primary" href="{{ top.url }}" target="_blank" rel="noopener noreferrer nofollow">{{ ico('ext') }}До продавця: {{ top.source }}{% if top.unit_price is not none %} · {{ top.unit_price|money }} ₴{% endif %}</a>
+  <span class="hint" style="margin-left:8px">перевірено {{ top.fetched_at|ago }}</span></p>{% endif %}
+{% if brand_site(g.brand) %}<p class="hint"><a href="{{ brand_site(g.brand) }}" target="_blank" rel="noopener">Каталог виробника ↗</a></p>{% endif %}
+{% if db_pid %}<form method="post" action="{{ url_for('watch_toggle', pid=db_pid) }}" class="inline" style="margin:8px 0 0">
+  <input type="hidden" name="csrf" value="{{ csrf() }}"><input type="hidden" name="next" value="{{ request.full_path }}">
+  <button class="btn sm {{ 'star-on' if watched }}" type="submit">{{ ico('star') }}{{ 'В обраному' if watched else 'Додати в обране' }}</button></form>{% endif %}
+
+<section class="card" style="margin-top:16px" aria-labelledby="h-of">
+  <h2 id="h-of">Пропозиції продавців</h2>
+  {% if g.stats %}<p class="hint" style="margin-top:0">Діапазон: {{ g.stats.min|money }} – {{ g.stats.max|money }} ₴ за од. · медіана {{ g.stats.median|money }} ₴ · {{ g.offers|length }} проп. від {{ g.n_sources }} продавців</p>
+  {% else %}<p class="hint" style="margin-top:0">Ціна за одиницю не розрахована: {{ g.raw_range.reasons|join('; ') }}. Показано початкові ціни: {{ g.raw_range.min|money }} – {{ g.raw_range.max|money }} {{ g.raw_range.currency }}.</p>{% endif %}
+  <form method="get" action="{{ url_for('compare') }}" id="cmp">
+    <input type="hidden" name="id" value="{{ g.id }}">
+    {% for k,v in ctx.items() if v %}<input type="hidden" name="{{ k }}" value="{{ v }}">{% endfor %}
+    <div class="tw"><table>
+    <caption class="sr">Пропозиції продавців для {{ g.mpn }}</caption>
+    <thead><tr><th><span class="sr">Вибір для порівняння</span></th><th>Продавець</th><th class="num">Ціна за од.</th><th class="num">Ціна упаковки</th><th>Доставка</th><th>Наявність</th><th>Перевірено</th><th></th></tr></thead>
+    <tbody>
+    {% for o in g.offers %}
+      <tr {% if o.oid==sel.oid %}class="sel"{% endif %}>
+        <td><input type="checkbox" name="o" value="{{ o.oid }}" class="pick" aria-label="Обрати для порівняння: {{ o.source }}"></td>
+        <td><b>{{ o.source }}</b>{% if o.demo %} <span class="badge" style="background:var(--muted)">Демо</span>{% endif %}
+          <div class="hint" style="margin:0">{{ o.mpn_raw }} · {{ ORIGINS[o.origin] }}</div></td>
+        <td class="num">{% if o.unit_price is not none %}<b>{{ o.unit_price|money }} ₴</b>{% if o.outlier %}<div class="flag">{{ ico('alert') }}викид</div>{% endif %}
+          {% else %}<span class="muted">не розраховано</span><div class="hint" style="margin:0">{{ o.unit_reason }}</div>{% endif %}</td>
+        <td class="num">{{ o.price|money }} {{ o.currency }}{% if o.pack_note and o.pack==1 and 'прийнято' in o.pack_note %}<div class="hint" style="margin:0">{{ o.pack_note }}</div>{% endif %}</td>
+        <td>{% if o.shipping %}{{ o.shipping.cost|money }} {{ o.shipping.currency }}{% if o.total_uah is not none %}<div><b>Разом {{ o.total_uah|money }} ₴</b>{% if o.lowest_total %} · найнижча сума{% endif %}</div>{% endif %}{% else %}<span class="muted">Доставка уточнюється</span>{% endif %}
+          {% if o.delivery_days is not none %}<div class="hint" style="margin:0">строк: {{ '%.0f'|format(o.delivery_days) }} дн.</div>{% endif %}</td>
+        <td>{% if o.avail==1 %}В наявності{% elif o.avail==0.5 %}Під замовлення{% elif o.avail==0 %}Немає{% else %}<span class="muted">Немає даних</span>{% endif %}</td>
+        <td class="muted">{{ o.fetched_at|ago }}{% if o.origin=='stale' %}<div class="flag">збережені дані</div>{% endif %}
+          <div><a href="{{ url_for('part', id=g.id, offer=o.oid, **ctx) }}#score">розрахунок оцінки</a></div></td>
+        <td>{% if o.url %}<a class="btn sm primary" href="{{ o.url }}" target="_blank" rel="noopener noreferrer nofollow" aria-label="До продавця: {{ o.source }}">{{ ico('ext') }}До продавця</a>{% else %}<span class="muted">без посилання</span>{% endif %}</td>
+      </tr>
+    {% endfor %}
+    </tbody></table></div>
+    <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-top:12px">
+      <button class="btn" type="submit" id="cmpbtn" disabled>{{ ico('swap') }}Порівняти вибрані</button>
+      <span class="hint" id="cmphint" role="status" style="margin:0">Оберіть 2–3 пропозиції для порівняння.</span>
+    </div>
+  </form>
+</section>
+
+<section class="card" style="margin-top:16px" id="score" aria-labelledby="h-sc">
+  <h2 id="h-sc">Оцінка пропозиції: {{ sel.source }}</h2>
+  {% if bd %}
+  <p class="hint" style="margin-top:0">Загальна оцінка <b>{{ '%.2f'|format(sel.score) }}</b> зі 1,00 — сума внесків. Для відсутніх даних вага не використовується, а решта ваг перераховується до 100 %.</p>
+  <div class="tw"><table>
+    <thead><tr><th>Складова</th><th class="num">Значення (0–1)</th><th class="num">Вага за замовчуванням</th><th class="num">Фактична вага</th><th class="num">Внесок</th></tr></thead>
+    <tbody>{% for r in bd %}<tr>
+      <td>{{ r.label }}</td>
+      {% if r.u is none %}<td class="num muted">Немає даних</td><td class="num">{{ '%.0f'|format(r.w*100) }} %</td><td class="num"><b>0 %</b> · не бере участі</td><td class="num muted">—</td>
+      {% else %}<td class="num">{{ '%.2f'|format(r.u) }}</td><td class="num">{{ '%.0f'|format(r.w*100) }} %</td><td class="num">{{ '%.0f'|format(r.eff*100) }} %</td><td class="num">{{ '%.3f'|format(r.part) }}</td>{% endif %}</tr>{% endfor %}</tbody></table></div>
+  <details class="more"><summary>Як розраховано складові</summary>
+    <p class="hint">Ціна: медіана групи / (медіана + ціна за од.). Доставка: 1 / (1 + дні / 2). Свіжість: e<sup>−вік у днях / 7</sup>. Наявність: 1 — є, 0,5 — під замовлення, 0 — немає.
+    Курси валют: {% for c,k in res.rates.items() %}{{ c }}={{ k }}{{ ', ' if not loop.last }}{% endfor %}. Ціни та наявність уточнюйте на сайті продавця.</p></details>
+  {% else %}<p class="muted" style="margin:0">Оцінку не розраховано: {{ sel.unit_reason or 'немає ціни за одиницю' }}.</p>{% endif %}
+</section>
+
+{% if strip %}<section class="card" aria-labelledby="h-an">
+  <h2 id="h-an">Розкид цін</h2>
+  <svg class="chart" viewBox="0 0 {{ strip.W }} {{ strip.H }}" role="img"
+       aria-label="Ціни: від {{ g.stats.min|money }} до {{ g.stats.max|money }} грн, медіана {{ g.stats.median|money }} грн">
+    <line class="axis" x1="28" x2="{{ strip.W-28 }}" y1="30" y2="30"/>
+    <line class="med" x1="{{ strip.med }}" x2="{{ strip.med }}" y1="16" y2="{{ strip.H-24 }}"/>
+    {% for p in strip.pts %}
+      {% if p.outlier %}<path class="pt out" d="M{{ p.x }} {{ 30+18*p.lvl-9 }} l9 9 -9 9 -9 -9 Z"><title>{{ p.label }}: {{ p.price|money }} ₴ (викид)</title></path>
+      {% else %}<circle class="pt" cx="{{ p.x }}" cy="{{ 30+18*p.lvl }}" r="7"><title>{{ p.label }}: {{ p.price|money }} ₴</title></circle>{% endif %}
+    {% endfor %}
+    <text x="28" y="{{ strip.H-6 }}">{{ g.stats.min|money }} ₴</text>
+    <text x="{{ strip.med }}" y="10" text-anchor="{{ 'start' if strip.med < 120 else ('end' if strip.med > strip.W-120 else 'middle') }}">медіана {{ g.stats.median|money }} ₴</text>
+    <text x="{{ strip.W-28 }}" y="{{ strip.H-6 }}" text-anchor="end">{{ g.stats.max|money }} ₴</text>
+  </svg>
+  <p class="hint">Кожна точка — пропозиція (грн за одиницю). Ромб — ціна, що різко виділяється серед інших.</p>
+</section>
+{% endif %}
+
+{% if hchart %}
+<section class="card" style="margin-top:16px" aria-labelledby="h-hist">
+  <h2 id="h-hist">Історія цін</h2>
+  <svg class="hist" viewBox="0 0 {{ hchart.W }} {{ hchart.H }}" role="img" aria-label="Зміна мінімальної ціни з {{ hchart.d0 }} по {{ hchart.d1 }}">
+    <polyline class="l2" points="{{ hchart.med }}"/>
+    <polyline class="l1" points="{{ hchart.min }}"/>
+    {% for p in hchart.pts %}<circle class="dot" cx="{{ p.x }}" cy="{{ p.y }}" r="4"><title>{{ p.d }}: {{ p.v|money }} ₴</title></circle>{% endfor %}
+    <text x="{{ hchart.px }}" y="{{ hchart.H-4 }}">{{ hchart.d0 }}</text>
+    <text x="{{ hchart.W-hchart.px }}" y="{{ hchart.H-4 }}" text-anchor="end">{{ hchart.d1 }}</text>
+    <text x="4" y="{{ hchart.H-30 }}">{{ hchart.lo|money }} ₴</text><text x="4" y="22">{{ hchart.hi|money }} ₴</text>
+  </svg>
+  <p class="hint">Суцільна лінія — найнижча ціна за день, пунктир — типова (медіана). Дані накопичуються з кожною перевіркою.</p>
+</section>
+{% elif db_pid %}
+<section class="card" style="margin-top:16px"><h2>Історія цін</h2><p class="muted" style="margin:0">Графік з’явиться після кількох перевірок у різні дні.</p></section>
+{% endif %}
+
+{% if others %}
+<section style="margin-top:24px"><h2>Інші позиції у цьому пошуку</h2>
+  <div class="chips">{% for x in others %}
+    <a class="chip" href="{{ url_for('part', id=x.id, **ctx) }}">{{ BADGES[x.level] }}: {{ x.brand }} {{ x.mpn }}</a>{% endfor %}</div></section>
+{% endif %}
+
+
+<script>
+(function(){var f=document.getElementById("cmp"),b=document.getElementById("cmpbtn"),h=document.getElementById("cmphint");
+if(!f)return;var boxes=[].slice.call(f.querySelectorAll(".pick"));
+function upd(){var n=boxes.filter(function(x){return x.checked}).length;
+  boxes.forEach(function(x){x.disabled=!x.checked&&n>=3});
+  b.disabled=n<2;
+  h.textContent=n>=3?"Обрано 3 пропозиції — це максимум для порівняння. Зніміть одну, щоб додати іншу.":(n<2?"Оберіть 2–3 пропозиції для порівняння.":"Обрано: "+n+".");}
+boxes.forEach(function(x){x.addEventListener("change",upd)});upd();})();
+</script>
+{% endblock %}

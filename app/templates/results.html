@@ -1,0 +1,103 @@
+{% extends "base.html" %}
+{% from "_icons.html" import ico %}
+{% from "_thumb.html" import thumb %}
+{% block title %}{{ res.q }}{% endblock %}
+{% block content %}
+{% set keep = {'m': m or none, 'sort': sort or none, 'stock': 1 if stock else none, 'back': back or none, 'car': car or none} %}
+<form class="search" action="{{ url_for('search') }}" method="get" data-busy style="margin-bottom:12px">
+  <div class="field">{{ ico('search') }}<label class="sr" for="q">Запит</label>
+    <input type="text" id="q" name="q" value="{{ res.q }}" required minlength="2" maxlength="80" autocomplete="off"></div>
+  <button class="btn primary" type="submit" data-busy="Шукаю…">Знайти</button>
+  {% if m %}<input type="hidden" name="m" value="{{ m }}">{% endif %}
+</form>
+
+<nav class="tabs" aria-label="Рівні відповідності">
+  <a href="{{ url_for('search', q=res.q, **keep) }}" {% if not level %}aria-current="page"{% endif %}>Усі<span class="n">{{ res.groups|length }}</span></a>
+  {% for k,(label,hint) in LEVELS.items() %}
+  <a href="{{ url_for('search', q=res.q, level=k, **keep) }}" title="{{ hint }}" {% if level==k %}aria-current="page"{% endif %}>{{ label }}<span class="n">{{ counts[k] }}</span></a>{% endfor %}
+</nav>
+
+{% if back %}<p class="hint"><a href="{{ back }}" style="display:inline-flex;gap:6px;align-items:center">{{ ico('back') }}До підбору за авто</a>{% if car %}: {{ car }}{% endif %}</p>{% endif %}
+<div style="display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;align-items:baseline">
+  <h1 style="font-size:1.4rem;margin:0">Результати для «{{ res.q }}»</h1>
+  <span class="muted">{{ res.groups|length }} {{ 'група' if res.groups|length==1 else 'груп' }} · {{ res.n_offers }} пропозицій
+    · <a href="{{ url_for('search', q=res.q, refresh=1, level=level or none, **keep) }}" style="display:inline-flex;gap:4px;align-items:center">{{ ico('refresh') }}оновити ціни</a></span>
+</div>
+
+{% set bad = res.sources|rejectattr('ok')|list %}
+{% if res.state=='all_failed' %}<div class="notice err" role="alert"><b>Не вдалося отримати дані.</b> Джерела недоступні: {{ bad|map(attribute='name')|join(', ') }}. Спробуйте пізніше.</div>
+{% elif res.state in ('partial','partial_stale','partial_empty') %}<div class="notice warn" role="status"><b>Частину джерел не вдалося опитати:</b> {{ bad|map(attribute='name')|join(', ') }}.
+  {% if res.state=='partial_stale' %}Для них показано <b>збережені дані</b> з зазначеним часом отримання.{% else %}Показано результат з решти джерел.{% endif %}</div>
+{% elif res.state=='empty_ok' %}<div class="notice" role="status"><b>Джерела відповіли, але збігів не знайдено.</b> Це не збій: за цим запитом пропозицій немає.</div>{% endif %}
+
+<details class="more"><summary>Стан джерел ({{ res.sources|selectattr('ok')|list|length }} із {{ res.sources|length }} відповіли)</summary>
+  <ul class="src-state">{% for s in res.sources %}<li><b>{{ s.name }}</b>{% if s.demo %} <span class="badge" style="background:var(--muted)">Демо</span>{% endif %} — {{ STATES[s.state] }}{% if s.fetched_at %}, дані від {{ s.fetched_at|ago }}{% endif %}{% if s.state in ('error','stale') and s.error and is_admin %}: {{ s.error }}{% endif %}</li>{% endfor %}</ul>
+</details>
+{% if is_admin %}<details class="more"><summary>Технічні деталі пошуку ({{ res.ms }} мс)</summary>
+<div class="status" aria-label="Стан джерел">
+  {% for s in res.sources %}
+  <span class="dot {{ 'ok' if s.ok else 'err' }}" title="{{ s.error or ('Отримано записів: ' ~ s['items']) }}">
+    {{ ico('check') if s.ok else ico('alert') }}{{ s.name }} · {% if s.ok %}{{ s['items'] }} зап.{% if s.cached %} · кеш {{ s.fetched_at|ago }}{% else %} · {{ s.ms }} мс{% endif %}{% else %}{{ s.error }}{% endif %}
+  </span>{% endfor %}
+</div>
+{% if res.rejected or res.invalid %}<p class="hint">Відхилено як невідповідні: {{ res.rejected }}; пропущено через відсутність ціни чи артикула: {{ res.invalid }}.</p>{% endif %}
+</details>{% endif %}
+{% if res.analog_queries %}<p class="hint">Враховано також аналоги: {{ res.analog_queries|join(', ') }}.</p>{% endif %}
+
+<form class="toolbar" method="get" action="{{ url_for('search') }}">
+  <input type="hidden" name="q" value="{{ res.q }}">{% if m %}<input type="hidden" name="m" value="{{ m }}">{% endif %}{% if level %}<input type="hidden" name="level" value="{{ level }}">{% endif %}{% if back %}<input type="hidden" name="back" value="{{ back }}">{% endif %}{% if car %}<input type="hidden" name="car" value="{{ car }}">{% endif %}
+  <label for="sort" class="muted" style="margin:0">Сортування</label>
+  <select id="sort" name="sort" onchange="this.form.submit()">
+    <option value="" {{ 'selected' if not sort }}>За відповідністю</option>
+    <option value="price" {{ 'selected' if sort=='price' }}>Найнижча ціна</option>
+    <option value="score" {{ 'selected' if sort=='score' }}>Найкраща оцінка пропозиції</option></select>
+  <label class="toggle" style="margin:0"><input type="checkbox" name="stock" value="1" {{ 'checked' if stock }} onchange="this.form.submit()" style="width:20px;height:20px"> Лише в наявності</label>
+  <noscript><button class="btn sm" type="submit">Застосувати</button></noscript>
+</form>
+
+<div class="stack">
+{% for g in groups %}
+  <a class="card res lv-{{ g.level }}" href="{{ url_for('part', id=g.id, q=res.q, level=level or none, **keep) }}">
+    {{ thumb(g.image, g.kind) }}
+    <div>
+      <h3>{{ g.title }}</h3>
+      <div class="muted"><b>{{ g.brand or 'Виробника не вказано' }}</b> · <span class="mono">{{ g.mpn }}</span></div>
+      <div class="why-line"><span class="badge lvl-{{ g.level }}">{{ ico({'IDENTICAL':'eq','CROSS_REFERENCE':'swap','CANDIDATE':'help'}[g.level]) }}{{ BADGES[g.level] }}</span>
+        <span>{{ g.evidence.basis }}</span></div>
+      <div class="muted small">{{ 'Б/в' if g.condition=='used' else 'Нова' }} · {% if g.pack is none %}фасування невідоме{% elif g.pack>1 %}упаковка {{ g.pack }} шт.{% else %}1 шт.{% endif %}
+        {% if g.offers|selectattr('demo')|list %} · <b>демо-дані</b>{% endif %}{% if g.offers|selectattr('origin','equalto','stale')|list %} · збережені дані{% endif %}</div>
+    </div>
+    <div class="price">
+      {% if g.stats %}<small class="muted">за одиницю</small><b>{{ g.stats.min|money }}{% if g.stats.max!=g.stats.min %} – {{ g.stats.max|money }}{% endif %} ₴</b>
+      {% else %}<small class="muted">початкова ціна</small><b>{{ g.raw_range.min|money }}{% if g.raw_range.max!=g.raw_range.min %} – {{ g.raw_range.max|money }}{% endif %} {{ g.raw_range.currency }}</b>
+        <small class="muted">за од. не розраховано</small>{% endif %}
+      <small class="muted">{{ g.n_sources }} {{ 'продавець' if g.n_sources==1 else 'продавці' if g.n_sources<5 else 'продавців' }}</small>
+    </div>
+  </a>
+{% else %}
+  {% if res.groups %}
+  <div class="card empty"><h2>Немає результатів за вибраними фільтрами</h2>
+    <p class="muted">Запит «{{ res.q }}» має {{ res.groups|length }} {{ 'групу' if res.groups|length==1 else 'груп' }} без фільтрів.</p>
+    <a class="btn" href="{{ url_for('search', q=res.q, m=m or none, back=back or none, car=car or none) }}">{{ ico('refresh') }}Скинути фільтри</a></div>
+  {% elif not res.local %}
+  <div class="card empty"><h2>{{ 'Нічого не знайдено' if res.state in ('empty_ok','no_sources') else 'Результатів немає' }}</h2>
+    <p class="muted">{% if res.state=='empty_ok' %}Джерела відповіли успішно, але збігів немає. Перевірте артикул або спробуйте коротший запит.{% elif res.state=='all_failed' %}Джерела не відповіли — це не означає, що деталі не існує.{% else %}Перевірте артикул або спробуйте коротший запит.{% endif %}{% if res.state=='no_sources' %} Джерела пошуку ще не налаштовано.{% endif %}</p>
+    {% if res.state=='no_sources' %}<a class="btn" href="{{ url_for('settings') }}">{{ ico('key') }}Налаштувати джерела</a>{% endif %}</div>
+  {% endif %}
+{% endfor %}
+</div>
+{% if res.local %}
+<section style="margin-top:24px" aria-labelledby="h-loc"><h2 id="h-loc">{{ 'Також у вашому архіві' if res.groups else 'Знайдено у вашому архіві' }}</h2>
+  <p class="hint">Дані, накопичені раніше: працюють без мережі й не витрачають запити. Актуальні ціни — на сторінці позиції.</p>
+  {% for p in res.local %}
+  <a class="card res lv-{{ p.level }}" href="{{ url_for('item_page', pid=p.id) }}">
+    {{ thumb(p.image, p.kind) }}
+    <div>
+      <span class="badge lvl-{{ p.level }}">{{ p.why }}</span>
+      <h3>{{ p.title or p.mpn }}</h3>
+      <div class="muted"><span class="mono">{{ p.mpn }}</span>{% if p.brand %} · {{ p.brand }}{% endif %}{% if p.cars %} · {{ p.cars.split(',')[:2]|join(', ') }}{% endif %}</div>
+    </div>
+    <div class="price"><b>{{ (p.last_min|money ~ ' ₴') if p.last_min else '—' }}</b><small class="muted">{{ p.last_price_at|ago if p.last_price_at else 'ціни не збережено' }}</small></div>
+  </a>{% endfor %}
+</section>{% endif %}
+{% endblock %}

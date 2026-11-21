@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% from "_icons.html" import ico %}
+{% block title %}Додати магазин за посиланням{% endblock %}
+{% block content %}
+<div class="crumbs"><a href="{{ url_for('admin') }}">{{ ico('back') }} Джерела</a></div>
+<h1 style="font-size:1.6rem">Додати магазин за посиланням</h1>
+<ol class="lead" style="margin:8px 0 16px;padding-left:20px">
+  <li>Відкрийте сайт магазину в браузері й знайдіть будь-який артикул, наприклад <b>0986452041</b>.</li>
+  <li>Скопіюйте адресу сторінки з результатами пошуку.</li>
+  <li>Вставте її нижче й вкажіть слово, яке ви шукали. Система сама знайде товари й ціни на сторінці.</li>
+</ol>
+<form class="card" method="post" style="display:grid;gap:16px">
+  <input type="hidden" name="csrf" value="{{ csrf() }}">
+  <div class="two">
+    <div><label for="name">Назва магазину</label><input type="text" id="name" name="name" required maxlength="80" value="{{ f.get('name','') }}" placeholder="Наприклад: Мій магазин"></div>
+    <div><label for="currency">Валюта цін</label><select id="currency" name="currency">{% for c in ['UAH','USD','EUR'] %}<option {{ 'selected' if f.get('currency')==c }}>{{ c }}</option>{% endfor %}</select></div>
+  </div>
+  <div><label for="url">Адреса сторінки результатів пошуку</label>
+    <input type="text" id="url" name="url" required value="{{ f.get('url','') }}" placeholder="https://магазин.ua/search?q=0986452041"></div>
+  <div><label for="term">Що ви шукали</label><input type="text" id="term" name="term" required value="{{ f.get('term','') }}"></div>
+  <p class="hint" style="margin:0">Працює зі сторінками, де товари є в HTML (більшість магазинів). Якщо сайт показує товари лише скриптом після завантаження, знайдено буде 0. Перевірте robots.txt та умови сайту: автоматичний збір має бути дозволений.</p>
+  <div><button class="btn primary" type="submit">{{ ico('flask') }}Додати й перевірити</button></div>
+</form>
+{% endblock %}

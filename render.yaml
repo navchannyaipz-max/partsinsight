@@ -1,0 +1,16 @@
+# Render.com (безкоштовний тариф): сервіс засинає без трафіку, а диск ТИМЧАСОВИЙ — база й ключі зникають при перезапуску.
+# Для захисту диплома надійніше PythonAnywhere (див. docs/DEPLOY.md). Цей файл — запасний варіант для демонстрації.
+services:
+  - type: web
+    name: partsinsight
+    runtime: python
+    plan: free
+    buildCommand: pip install -r requirements.txt -r requirements-hosting.txt
+    startCommand: gunicorn wsgi:app --workers 1 --threads 4
+    envVars:
+      - key: PARTSINSIGHT_DATA
+        value: /tmp/partsinsight-data
+      - key: PARTSINSIGHT_DEMO
+        value: "0"
+      - key: SECRET_KEY
+        generateValue: true

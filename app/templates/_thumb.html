@@ -1,0 +1,4 @@
+{% from "_icons.html" import ico %}
+{% macro thumb(image, kind, cls='') -%}
+<span class="thumb {{ cls }}" title="{{ {'filter':'Фільтр','brake':'Гальма','spark':'Запалювання','shock':'Підвіска','belt':'Ремені/ГРМ','bearing':'Підшипник','battery':'Акумулятор','bulb':'Освітлення','wiper':'Двірники','tire':'Колеса','drop':'Рідини/охолодження','clutch':'Зчеплення','link':'Ходова','exhaust':'Вихлоп','part':'Запчастина'}.get(kind, 'Запчастина') }}">{{ ico('k-' ~ (kind or 'part')) }}{% if image %}<img src="{{ image }}" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer" onerror="this.remove()">{% endif %}</span>
+{%- endmacro %}

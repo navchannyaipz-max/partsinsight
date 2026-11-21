@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% from "_icons.html" import ico %}
+{% from "_thumb.html" import thumb %}
+{% block title %}{{ it.brand }} {{ it.mpn }}{% endblock %}
+{% macro ship(o) -%}
+{%- if o.shipping_checked is none %}<span class="muted">невідомо</span>
+{%- elif o.shipping_free %}Безкоштовно (підтверджено джерелом){% if o.total_uah is not none %}<div><b>Разом {{ o.total_uah|money }} ₴</b></div>{% endif %}
+{%- elif o.shipping_cost is not none %}{{ o.shipping_cost|money }} {{ o.shipping_currency }}{% if o.total_uah is not none %}<div><b>Разом {{ o.total_uah|money }} ₴</b></div>{% endif %}
+{%- else %}<span class="muted">Доставка уточнюється</span>{% endif -%}
+{%- endmacro %}
+{% block content %}
+<div class="crumbs"><a href="{{ url_for('archive_page') }}">← Каталог</a></div>
+<div style="display:flex;gap:16px;align-items:center;flex-wrap:wrap;margin-top:8px">
+{{ thumb(it.image, it.kind, 'lg') }}
+<div style="flex:1;min-width:240px"><h1 style="margin:0">{{ it.title or it.mpn }}</h1>
+<p class="muted" style="margin:6px 0 0"><span class="mono">{{ it.mpn }}</span> · {{ it.brand or 'виробник не вказано' }}{% if it.cars %} · {{ it.cars.split(',')[:4]|join(', ') }}{% endif %}</p></div></div>
+{% if brand_site(it.brand) %}<p class="hint"><a href="{{ brand_site(it.brand) }}" target="_blank" rel="noopener">Каталог виробника ↗</a></p>{% endif %}
+<div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap">
+  <a class="btn primary" href="{{ url_for('search', q=it.mpn, m=it.brand or none, refresh=1) }}" data-busy-link>{{ ico('refresh') }}Оновити ціни</a>
+  <form method="post" action="{{ url_for('watch_toggle', pid=it.id) }}" class="inline"><input type="hidden" name="csrf" value="{{ csrf() }}"><input type="hidden" name="next" value="{{ request.path }}">
+  <button class="btn {{ 'star-on' if watched }}" type="submit">{{ ico('star') }}{{ 'В обраному' if watched else 'Додати в обране' }}</button></form></div>
+
+<section class="card" style="margin-top:16px"><h2>Останні відомі пропозиції</h2>
+{% if it.offers %}<p class="hint" style="margin-top:0">Збережені дані: кожен рядок показує час початкового отримання. «Невідомо» — атрибут не був збережений у старих записах.</p>
+<div class="tw"><table><thead><tr><th>Джерело</th><th class="num">Ціна</th><th class="num">≈ грн/од.</th><th>Фасування</th><th>Доставка</th><th>Стан</th><th>Походження</th><th>Отримано</th></tr></thead><tbody>
+{% for o in it.offers %}<tr><td>{% if o.url %}<a href="{{ o.url }}" target="_blank" rel="noopener nofollow">{{ o.source }}</a>{% else %}{{ o.source }}{% endif %}</td>
+<td class="num">{{ o.price|money }} {{ o.currency }}</td>
+<td class="num">{% if o.unit_price_uah is not none %}{{ o.unit_price_uah|money }}{% else %}<span class="muted">не розраховано</span>{% endif %}</td>
+<td>{% if o.pack is none %}<span class="muted">Фасування невідоме</span>{% else %}{{ o.pack }} шт.{% endif %}</td>
+<td>{{ ship(o) }}</td>
+<td>{% if o.condition=='used' %}б/в{% elif o.condition=='new' %}нова{% else %}<span class="muted">невідомо</span>{% endif %}</td>
+<td>{{ 'збережені дані' if o.origin in ('stale','archive',none) and o.origin!='live' and o.origin!='cache' else ORIGINS[o.origin] }}{% if o.origin is none %} <span class="muted">(старий запис)</span>{% endif %}</td>
+<td>{{ o.fetched_at|ago }} <span class="muted">({{ o.fetched_at[:16]|replace('T',' ') }} UTC)</span></td></tr>{% endfor %}</tbody></table></div>
+{% else %}<p class="muted" style="margin:0">Ціни ще не збережено. Натисніть «Оновити ціни».</p>{% endif %}</section>
+
+
+{% if it.snapshots|length > 1 or (it.snapshots and not it.offers) %}<section class="card" style="margin-top:16px"><h2>Історія знімків</h2>
+<p class="hint" style="margin-top:0">Історичні значення на момент кожної перевірки; пізніші зміни ціни чи доставки їх не змінюють.</p>
+<div class="tw"><table><thead><tr><th>Отримано</th><th>Джерело</th><th class="num">Ціна</th><th>Доставка</th></tr></thead><tbody>
+{% for o in it.snapshots %}<tr><td>{{ o.fetched_at[:16]|replace('T',' ') }} UTC</td><td>{{ o.source }}</td><td class="num">{{ o.price|money }} {{ o.currency }}</td><td>{{ ship(o) }}</td></tr>{% endfor %}</tbody></table></div></section>{% endif %}
+{% if hchart %}<section class="card" style="margin-top:16px"><h2>Історія цін</h2>
+  <svg class="hist" viewBox="0 0 {{ hchart.W }} {{ hchart.H }}" role="img" aria-label="Зміна мінімальної ціни з {{ hchart.d0 }} по {{ hchart.d1 }}">
+    <polyline class="l2" points="{{ hchart.med }}"/><polyline class="l1" points="{{ hchart.min }}"/>
+    {% for p in hchart.pts %}<circle class="dot" cx="{{ p.x }}" cy="{{ p.y }}" r="4"><title>{{ p.d }}: {{ p.v|money }} ₴</title></circle>{% endfor %}
+    <text x="{{ hchart.px }}" y="{{ hchart.H-4 }}">{{ hchart.d0 }}</text><text x="{{ hchart.W-hchart.px }}" y="{{ hchart.H-4 }}" text-anchor="end">{{ hchart.d1 }}</text>
+    <text x="4" y="{{ hchart.H-30 }}">{{ hchart.lo|money }} ₴</text><text x="4" y="22">{{ hchart.hi|money }} ₴</text></svg></section>{% endif %}
+
+{% if analogs %}<section class="card" style="margin-top:16px"><h2>Аналоги</h2><ul>
+{% for a in analogs %}<li><a href="{{ url_for('search', q=a.mpn, m=a.mfr or none) }}">{{ a.mfr }} {{ a.mpn }}</a> <span class="muted">· {{ a.ref_source }}</span></li>{% endfor %}</ul></section>{% endif %}
+{% endblock %}

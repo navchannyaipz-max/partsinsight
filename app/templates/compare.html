@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% from "_icons.html" import ico %}
+{% block title %}Порівняння пропозицій{% endblock %}
+{% block content %}
+<div class="crumbs"><a href="{{ part_url }}">← {{ g.brand }} {{ g.mpn }}</a></div>
+<h1 style="font-size:1.4rem">Порівняння вибраних пропозицій</h1>
+<p class="muted">{{ g.title }} · <span class="mono">{{ g.mpn }}</span></p>
+<div class="tw"><table>
+  <caption class="sr">Порівняння {{ chosen|length }} пропозицій</caption>
+  <thead><tr><th>Показник</th>{% for o in chosen %}<th>{{ o.source }}{% if o.demo %} <span class="badge" style="background:var(--muted)">Демо</span>{% endif %}
+    <div><a href="{{ without(o.oid) }}" style="font-weight:400">{{ ico('close') if false }}Прибрати</a></div></th>{% endfor %}</tr></thead>
+  <tbody>
+    <tr><th scope="row">Ціна за одиницю</th>{% for o in chosen %}<td class="num">{% if o.unit_price is not none %}<b>{{ o.unit_price|money }} ₴</b>{% if o.is_low %}<div><b>Найнижча відома ціна за одиницю</b></div>{% endif %}{% else %}<span class="muted">Немає даних</span><div class="hint" style="margin:0">{{ o.unit_reason }}</div>{% endif %}</td>{% endfor %}</tr>
+    <tr><th scope="row">Ціна упаковки</th>{% for o in chosen %}<td class="num">{{ o.price|money }} {{ o.currency }}{% if o.pack %} · {{ o.pack }} шт.{% endif %}</td>{% endfor %}</tr>
+    <tr><th scope="row">Доставка</th>{% for o in chosen %}<td>{% if o.shipping %}{{ o.shipping.cost|money }} {{ o.shipping.currency }}{% if o.total_uah is not none %}<div><b>Разом {{ o.total_uah|money }} ₴</b></div>{% endif %}{% else %}Доставка уточнюється{% endif %}</td>{% endfor %}</tr>
+    <tr><th scope="row">Наявність</th>{% for o in chosen %}<td>{% if o.avail==1 %}В наявності{% elif o.avail==0.5 %}Під замовлення{% elif o.avail==0 %}Немає{% else %}Немає даних{% endif %}</td>{% endfor %}</tr>
+    <tr><th scope="row">Строк доставки</th>{% for o in chosen %}<td>{% if o.delivery_days is not none %}{{ '%.0f'|format(o.delivery_days) }} дн.{% else %}Немає даних{% endif %}</td>{% endfor %}</tr>
+    <tr><th scope="row">Час перевірки</th>{% for o in chosen %}<td>{{ o.fetched_at|ago }} <span class="muted">({{ o.fetched_at[:16]|replace('T',' ') }} UTC)</span>{% if o.origin=='stale' %}<div class="flag">збережені дані</div>{% endif %}</td>{% endfor %}</tr>
+    <tr><th scope="row">Посилання</th>{% for o in chosen %}<td>{% if o.url %}<a class="btn sm primary" href="{{ o.url }}" target="_blank" rel="noopener noreferrer nofollow">{{ ico('ext') }}До продавця</a>{% else %}Немає даних{% endif %}</td>{% endfor %}</tr>
+  </tbody></table></div>
+<p style="margin-top:16px"><a class="btn" href="{{ url_for('search', **ctx) }}">{{ ico('back') }}Повернутися до результатів</a></p>
+{% endblock %}

@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% from "_icons.html" import ico %}
+{% block title %}Тест джерела{% endblock %}
+{% block content %}
+<div class="crumbs"><a href="{{ url_for('admin') }}">← Джерела</a></div>
+<h1 style="font-size:1.6rem">Тест: {{ s.name }}</h1>
+<div class="card" style="margin-bottom:16px">
+  <div class="tiles" style="margin:0 0 12px">
+    <div class="tile {{ 'hl' if not err }}"><small>Результат</small><b>{{ 'Помилка' if err else 'Успішно' }}</b></div>
+    <div class="tile"><small>HTTP</small><b>{{ meta.status or '—' }}</b></div>
+    <div class="tile"><small>Знайдено записів</small><b>{{ n }}</b></div>
+    <div class="tile"><small>Час</small><b>{{ ms }} мс</b></div>
+  </div>
+  {% if err %}<p class="flag">{{ ico('alert') }}{{ err }}</p>{% endif %}
+  {% if meta.url %}<p class="hint" style="word-break:break-all">Запит: {{ meta.url }} · {{ meta.bytes }} байт{% if meta.title %} · заголовок сторінки: «{{ meta.title }}»{% endif %}</p>{% endif %}
+  {% if not err and n == 0 %}
+  <p><b>Записів не знайдено.</b> Для HTML: селектор <code>item</code> не збігся з жодним елементом (відкрийте сторінку в браузері → «Інспектувати» → скопіюйте CSS-селектор картки товару).
+  Для JSON: перевірте <code>items_path</code>. Також сайт міг віддати порожню сторінку для скрипта (динамічний JavaScript) — тоді потрібен API.</p>{% endif %}
+  <form method="post" action="{{ url_for('source_test', sid=s.id) }}" style="display:flex;gap:8px;flex-wrap:wrap;align-items:end;margin-top:12px">
+    <input type="hidden" name="csrf" value="{{ csrf() }}">
+    <div><label for="probe">Тестовий запит</label><input type="text" id="probe" name="probe" value="{{ probe }}" style="min-width:240px"></div>
+    <button class="btn" type="submit">Повторити</button>
+    <a class="btn" href="{{ url_for('source_edit', sid=s.id) }}">Змінити профіль</a>
+  </form>
+</div>
+{% if sample %}
+<div class="card tw"><h2>Перші записи після розбору</h2>
+<table><thead><tr><th>Назва</th><th>Артикул (сирий → нормалізований)</th><th>Виробник</th><th class="num">Ціна</th><th>Валідність</th></tr></thead><tbody>
+{% for x in sample %}<tr>
+ <td>{{ x.raw.title or '—' }}</td>
+ <td class="mono">{{ x.raw.mpn or '—' }}{% if x.norm %} → {{ x.norm.norm_mpn }}{% endif %}</td>
+ <td>{{ x.raw.brand or '—' }}</td>
+ <td class="num">{{ x.raw.price if x.raw.price is not none else '—' }} {{ x.raw.currency or '' }}</td>
+ <td>{% if x.ok %}<span class="badge lvl-IDENTICAL">{{ ico('check') }}придатний</span>{% else %}<span class="badge lvl-CANDIDATE">{{ ico('alert') }}немає артикула або ціни</span>{% endif %}</td>
+</tr>{% endfor %}</tbody></table></div>
+{% endif %}
+{% endblock %}

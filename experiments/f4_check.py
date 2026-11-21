@@ -26,11 +26,16 @@ def main():
     src.backup(dst); src.close(); dst.close()
     con = db.connect(str(tmp))
     fetcher.set_secrets({r["key"]: r["value"] for r in con.execute("SELECT key,value FROM settings")})
-    rows = con.execute("SELECT name FROM sources WHERE enabled=1 ORDER BY id").fetchall()
-    names = [r["name"] for r in rows if not r["name"].startswith("Демо")]
+    rows = con.execute("SELECT name, search_url, last_status FROM sources WHERE enabled=1 ORDER BY id").fetchall()
+    # реальні джерела: без демо й шаблонів (шаблони мають заглушкові адреси на кшталт example.com)
+    real = [r for r in rows if not r["name"].startswith(("Демо", "Шаблон")) and "example." not in (r["search_url"] or "")]
+    real.sort(key=lambda r: r["last_status"] != "ok")
+    names = [r["name"] for r in real]
     name = a.source or (names[0] if names else None)
     if not name:
-        print("Немає увімкнених реальних джерел: додайте джерело в адмінці й повторіть."); sys.exit(2)
+        print("Немає увімкненого РЕАЛЬНОГО джерела (шаблони й демо не підходять).\n"
+              "Відкрийте програму → «Джерела» → додайте магазин або введіть ключ (eBay / SerpApi), увімкніть джерело й повторіть."); sys.exit(2)
+    print(f"Перевіряю джерело: {name}")
     con.execute("UPDATE sources SET enabled=0 WHERE name<>?", (name,)); con.commit()
     con.execute("DELETE FROM cache") if con.execute("SELECT name FROM sqlite_master WHERE name='cache'").fetchone() else None
     con.commit()
@@ -41,7 +46,7 @@ def main():
         return label, r.get("state"), sum(len(g.get("offers", [])) for g in r.get("groups", [])), st
 
     out = [run("1. Живий запит", True), run("2. Повторний запит (кеш)", False)]
-    con.execute("UPDATE sources SET search_url='http://127.0.0.1:9/unreachable?q={q}' WHERE name=?", (name,)); con.commit()
+    con.execute("UPDATE sources SET search_url='https://unreachable.invalid/search?q={q}' WHERE name=?", (name,)); con.commit()
     if con.execute("SELECT name FROM sqlite_master WHERE name='cache'").fetchone():
         con.execute("UPDATE cache SET fetched_at=datetime('now','-3 day')") ; con.commit()
     out.append(run("3. ЗМОДЕЛЬОВАНИЙ збій джерела (кеш застарів)", True))

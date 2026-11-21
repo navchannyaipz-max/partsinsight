@@ -1,0 +1,11 @@
+digraph G { rankdir=LR; ranksep=1.0; nodesep=0.7;
+ GRAPH_HEAD
+ node [shape=box, style="rounded,filled", margin="0.25,0.15"];
+ i [shape=circle, label="", width=0.25, fillcolor=black];
+ live [label="актуально\n(live)"]; cache [label="з кешу\n(cache)"]; empty [label="порожньо\n(empty)"]; stale [label="застарілі дані\n(stale)"]; err [label="помилка\n(error)"];
+ f [shape=doublecircle, label="", width=0.25, fillcolor=black];
+ i -> live [label="запит;\nуспішна відповідь"]; i -> err [label="збій,\nкешу немає"];
+ live -> cache [label="повторний запит\nу межах TTL"]; cache -> live [label="TTL минув;\nоновлення успішне", constraint=false];
+ live -> empty [label="0 позицій"]; cache -> stale [label="оновлення\nне вдалося"]; stale -> live [label="джерело\nвідновилось", constraint=false]; err -> live [label="джерело\nвідновилось", constraint=false];
+ live -> f [label="кінець\nзапиту"];
+}

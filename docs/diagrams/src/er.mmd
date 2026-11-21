@@ -1,0 +1,64 @@
+%%{init: {"theme":"base","themeVariables":{"fontFamily":"FreeSerif","fontSize":"15px","primaryColor":"#ffffff","primaryTextColor":"#000000","primaryBorderColor":"#000000","lineColor":"#000000","secondaryColor":"#ffffff","tertiaryColor":"#ffffff","mainBkg":"#ffffff","nodeBorder":"#000000","attributeBackgroundColorOdd":"#ffffff","attributeBackgroundColorEven":"#ffffff"}}}%%
+erDiagram
+  SOURCES ||--o{ CACHE : "кешує відповіді"
+  PARTS ||--o{ PRICE_SNAPSHOTS : "має знімки цін"
+  PARTS ||--o{ VEHICLE_PARTS : "знайдена для авто"
+  PARTS ||--o| WATCHLIST : "у списку спостереження"
+  SOURCES ||--o{ PRICE_SNAPSHOTS : "джерело (за назвою)"
+  BRANDS ||--o{ ALIASES : "має написання"
+  SOURCES { int id PK
+    text name
+    text kind
+    int enabled
+    text search_url
+    text profile
+    text currency
+    int delay_ms
+    text last_status }
+  CACHE { int source_id PK,FK
+    text qkey PK
+    text fetched_at
+    text items }
+  PARTS { int id PK
+    text norm_mpn UK
+    text brand_key UK
+    text mpn
+    text title
+    text first_seen
+    text last_seen }
+  PRICE_SNAPSHOTS { int id PK
+    int part_id FK
+    text source
+    real price
+    text currency
+    real unit_price_uah
+    int pack
+    text condition
+    text origin
+    real shipping_cost
+    real total_uah
+    text fetched_at }
+  VEHICLE_PARTS { int id PK
+    int part_id FK
+    text make
+    text model
+    int year
+    text part_type }
+  WATCHLIST { int id PK
+    int part_id FK
+    real base_price_uah }
+  BRANDS { int id PK
+    text canonical UK
+    int verified }
+  ALIASES { text alias PK
+    text canonical }
+  CROSS_REFS { int id PK
+    text mpn_a
+    text mpn_b
+    text ref_source
+    int verified }
+  CAR_MODELS { int id PK
+    text make UK
+    text model UK
+    int year_from
+    int year_to }

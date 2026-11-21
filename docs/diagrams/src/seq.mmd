@@ -1,0 +1,20 @@
+%%{init: {"theme":"base","themeVariables":{"fontFamily":"FreeSerif","fontSize":"16px","primaryColor":"#ffffff","primaryTextColor":"#000000","primaryBorderColor":"#000000","lineColor":"#000000","secondaryColor":"#ffffff","tertiaryColor":"#ffffff","actorBkg":"#ffffff","actorBorder":"#000000","actorTextColor":"#000000","actorLineColor":"#000000","signalColor":"#000000","signalTextColor":"#000000","noteBkgColor":"#ffffff","noteBorderColor":"#000000","noteTextColor":"#000000","activationBkgColor":"#d9d9d9","activationBorderColor":"#000000","labelBoxBkgColor":"#ffffff","labelBoxBorderColor":"#000000","labelTextColor":"#000000","loopTextColor":"#000000","sequenceNumberColor":"#ffffff"}}}%%
+sequenceDiagram
+  autonumber
+  actor U as Користувач
+  participant W as Flask (маршрут)
+  participant S as Сервіс пошуку
+  participant C as Кеш / джерела
+  participant M as Зіставлення
+  participant D as SQLite (архів)
+  U->>+W: запит q
+  W->>+S: search(q)
+  S->>+C: запит до кешу та активних джерел
+  C-->>-S: пропозиції і стани джерел
+  S->>+D: пошук у локальному архіві
+  D-->>-S: раніше знайдені деталі
+  S->>+M: визначити рівні відповідності
+  M-->>-S: підстави, групи, аналоги
+  S->>D: запис деталей і знімків цін
+  S-->>-W: ранжована видача
+  W-->>-U: результати зі станом джерел

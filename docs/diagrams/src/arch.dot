@@ -1,0 +1,15 @@
+digraph G { rankdir=TB; ranksep=0.55; nodesep=0.45; compound=true;
+ GRAPH_HEAD
+ node [shape=component];
+ U [shape=box, label="Користувач\n(браузер)"]; A [shape=box, label="Адміністратор\n(браузер)"];
+ subgraph cluster_p { label="Рівень представлення"; labeljust=l; style=solid; W [label="«component»\nFlask: маршрути, шаблони,\nобмеження частоти, права доступу"]; }
+ subgraph cluster_a { label="Прикладний рівень"; labeljust=l; style=solid;
+  S [label="«component»\nОтримання даних\n(адаптери джерел)"]; N [label="«component»\nНормалізація\nта словники"]; P [label="«component»\nПошук\nі ранжування"]; M [label="«component»\nЗіставлення\n(3 рівні)"]; AN [label="«component»\nАналітика\nпропозицій"]; }
+ subgraph cluster_d { label="Рівень зберігання"; labeljust=l; style=solid; DB [shape=cylinder, label="SQLite (WAL):\nджерела, кеш, архів деталей,\nзнімки цін, довідники"]; }
+ X [shape=box3d, label="Зовнішні джерела\n(JSON API / HTML)"];
+ U->W; A->W;
+ W->S [lhead=cluster_a, style=dashed];
+ P->M [style=dashed]; S->N [style=dashed]; P->N [style=dashed]; M->N [style=dashed];
+ S->X [style=dashed, dir=both];
+ AN->DB [ltail=cluster_a, style=dashed, label=" SQL"];
+}

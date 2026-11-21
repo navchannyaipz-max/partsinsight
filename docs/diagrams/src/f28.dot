@@ -1,0 +1,12 @@
+digraph G { rankdir=TB; ranksep=0.32; nodesep=0.35;
+ GRAPH_HEAD
+ a [shape=box, style="rounded,filled", label="Початок:\nнормалізовані записи пропозицій"];
+ b [shape=box, label="Відбір кандидатів: виробник + номер;\nспільний початок; триграми"];
+ c [shape=box, label="Перевірка виробника, номера\nта критичних атрибутів"];
+ d [shape=diamond, label="Збіг номера та\nвиробника?"]; d2 [shape=diamond, label="Є однозначна пара\nу cross_refs?"]; d3 [shape=diamond, label="Є ознаки\nподібності?"];
+ i [shape=box, label="IDENTICAL\n(«За артикулом»)"]; x [shape=box, label="CROSS_REFERENCE\n(«Аналог за довідником»)"]; k [shape=box, label="CANDIDATE\n(«Можливий збіг»)"]; r [shape=box, label="Відхилення"];
+ g1 [shape=box, label="Група тотожних за ключем\n«виробник + номер + стан + фасування»"]; g2 [shape=box, label="Окремий розділ видачі\nз посиланням на довідник"]; g3 [shape=box, label="Окремий розділ видачі\nбез включення до статистики цін"];
+ z [shape=box, style="rounded,filled", label="Кінець"];
+ a->b->c->d; d->i [label="так"]; d->d2 [label="ні"]; d2->x [label="так"]; d2->d3 [label="ні"]; d3->k [label="так"]; d3->r [label="ні"];
+ i->g1->z; x->g2->z; k->g3->z; r->z;
+}

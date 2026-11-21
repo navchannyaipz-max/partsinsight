@@ -1,0 +1,17 @@
+digraph G { rankdir=TB; ranksep=0.35; nodesep=0.4;
+ GRAPH_HEAD
+ a [shape=box, style="rounded,filled", label="Початок:\nзапит користувача"];
+ b [shape=box, label="Розділення запиту на виробника\nй артикул; план запитів\n(артикул + відомі аналоги)"];
+ c [shape=diamond, label="Свіжий\nкеш є?"];
+ d [shape=box, label="HTTP-запит до джерела\n(robots.txt, затримка, таймаут)"];
+ e [shape=diamond, label="Відповідь\nотримана?"];
+ f [shape=parallelogram, label="Відповідь JSON / HTML"];
+ g [shape=box, label="Розбір за профілем;\nвалідація й нормалізація\n(артикул, виробник, фасування, доставка)"];
+ h [shape=box, label="Оновлення кешу;\nстан «актуально» / «з кешу»"];
+ i [shape=diamond, label="Є попередній\nкеш?"];
+ j [shape=box, label="Стан «застарілі дані»\n(початкова дата збережена)"];
+ k [shape=box, label="Стан «помилка»;\nпошук за іншими джерелами триває"];
+ l [shape=box, label="Збереження: запис деталі\nта новий знімок ціни"];
+ z [shape=box, style="rounded,filled", label="Кінець: пропозиції зі станом джерел"];
+ a->b->c; c->h [label="так"]; c->d [label="ні"]; d->e; e->f [label="так"]; f->g->h->l->z; e->i [label="ні"]; i->j [label="так"]; i->k [label="ні"]; j->l; k->z;
+}

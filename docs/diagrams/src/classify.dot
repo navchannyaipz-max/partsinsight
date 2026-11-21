@@ -1,0 +1,12 @@
+digraph G { rankdir=TB; ranksep=0.3; nodesep=0.35;
+ GRAPH_HEAD
+ s [shape=box, style="rounded,filled", label="Початок: пропозиція та запит\n(нормалізований номер, виробник запиту)"];
+ d1 [shape=diamond, label="Номер\nзбігається?"]; d0 [shape=diamond, label="Виробник\nпродавця відомий?"]; d2 [shape=diamond, label="Виробник запиту заданий\nі відрізняється?"];
+ id [shape=box, label="IDENTICAL\n«За артикулом»"]; c1 [shape=box, label="CANDIDATE\n(no_seller_brand)"]; c2 [shape=box, label="CANDIDATE\n(brand_conflict)"];
+ cr0 [shape=diamond, label="Однозначна пара\nу cross_refs?"]; cr [shape=box, label="CROSS_REFERENCE\n«Аналог за довідником»"];
+ pf [shape=diamond, label="Спільний початок, H ≥ θ або\nвсі слова запиту в назві?"]; cd [shape=box, label="CANDIDATE\n«Можливий збіг»"]; no [shape=box, label="Відхилення\n(не показувати)"];
+ z [shape=box, style="rounded,filled", label="Кінець"];
+ s->d1; d1->d0 [label="так"]; d1->cr0 [label="ні"]; d0->c1 [label="ні"]; d0->d2 [label="так"]; d2->c2 [label="так"]; d2->id [label="ні"];
+ cr0->cr [label="так"]; cr0->pf [label="ні"]; pf->cd [label="так"]; pf->no [label="ні"];
+ id->z; c1->z; c2->z; cr->z; cd->z; no->z;
+}

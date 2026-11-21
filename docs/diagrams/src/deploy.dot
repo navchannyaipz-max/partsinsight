@@ -1,0 +1,8 @@
+digraph G { rankdir=LR; ranksep=0.9; nodesep=0.5; compound=true;
+ GRAPH_HEAD
+ B [shape=box3d, label="«device»\nКомп’ютер користувача\nБраузер"];
+ subgraph cluster_h { label="«execution environment»  Хостинг PythonAnywhere"; labeljust=l; style=solid;
+  W [shape=box3d, label="«node»\nWSGI-сервер"]; A [shape=component, label="Flask-застосунок\nPartsInsight"]; D [shape=cylinder, label="SQLite (WAL)\npartsinsight.db"]; }
+ X [shape=box3d, label="«node»\nЗовнішні джерела\n(JSON API / HTML)"]; G [shape=box3d, label="«node»\nGitHub\n(вихідний код)"];
+ B -> W [label="HTTPS"]; W -> A [label="WSGI"]; A -> D [label="SQL"]; A -> X [label="HTTP + robots.txt"]; G -> A [label="git pull", style=dashed];
+}

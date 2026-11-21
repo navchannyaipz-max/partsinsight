@@ -1,0 +1,11 @@
+digraph G { rankdir=TB; ranksep=0.32; nodesep=0.35;
+ GRAPH_HEAD
+ q [shape=box, style="rounded,filled", label="Початок:\nпошуковий запит q"];
+ n [shape=box, label="Нормалізація запиту;\nвизначення типу (номер / текст)"];
+ c1 [shape=box, label="Канал 1: точний або\nпрефіксний номер"]; c2 [shape=box, label="Канал 2: збіг слів назви\nF = f / (f + λ)"]; c3 [shape=box, label="Канал 3: триграмна\nподібність T"];
+ m [shape=box, label="Об’єднання кандидатів;\nусунення дублів"];
+ s [shape=box, label="Обчислення E, P, F, T, M\nі S(q, r) = Σ wᵢXᵢ / Σ wᵢ"];
+ r [shape=parallelogram, label="Впорядкований список\nз поясненням складників"];
+ z [shape=box, style="rounded,filled", label="Кінець: передача на перевірку\nтотожності (підрозділ 2.6)"];
+ q->n; n->c1; n->c2; n->c3; c1->m; c2->m; c3->m; m->s->r->z;
+}

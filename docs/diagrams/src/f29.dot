@@ -1,0 +1,13 @@
+digraph G { rankdir=TB; ranksep=0.32; nodesep=0.35;
+ GRAPH_HEAD
+ a [shape=box, style="rounded,filled", label="Початок:\nгрупа тотожних пропозицій"];
+ b [shape=box, label="Фільтр порівнянності:\nстан, фасування, валюта"];
+ c [shape=diamond, label="Ціну за одиницю\nвизначено?"];
+ c2 [shape=box, label="Виключення з оцінки та медіани;\nпозначка «невідомо»"];
+ d [shape=box, label="Нормування критеріїв:\nціна, наявність, доставка, свіжість"];
+ e [shape=box, label="Зважений рейтинг\nза наявними критеріями; повнота Cᵢ"];
+ f [shape=box, label="Статистика: min, медіана, max;\nвідхилення D, модифікований Z"];
+ g [shape=parallelogram, label="Пропозиції, пояснення,\nпопередження"];
+ z [shape=box, style="rounded,filled", label="Кінець"];
+ a->b->c; c->d [label="так"]; c->c2 [label="ні"]; c2->g; d->e; d->f; e->g; f->g; g->z;
+}
